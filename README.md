@@ -1,6 +1,6 @@
 # Logrusprom
 
-A [logrus](https://github.com/sirupsen/logrus) hook to export total numbers of log message by their level and by error 
+A [logrus](https://github.com/sirupsen/logrus) hook to export total numbers of log message by their level and by 
 type for [Prometheus](https://prometheus.io/).
 
 ## Ouput example
@@ -8,13 +8,13 @@ type for [Prometheus](https://prometheus.io/).
 ```promql
 # HELP log_messages Total number of log_messages .
 # TYPE log_messages counter
-log_messages{error_type="WarningOnSomething",level="warning"} 1
-log_messages{error_type="untyped",level="debug"} 0
-log_messages{error_type="untyped",level="error"} 1
-log_messages{error_type="untyped",level="fatal"} 0
-log_messages{error_type="untyped",level="info"} 1
-log_messages{error_type="untyped",level="panic"} 0
-log_messages{error_type="untyped",level="warning"} 0
+log_messages{level="debug",type="untyped"} 0
+log_messages{level="error",type="untyped"} 1
+log_messages{level="fatal",type="untyped"} 0
+log_messages{level="info",type="untyped"} 1
+log_messages{level="panic",type="untyped"} 0
+log_messages{level="warning",type="WarningOnSomething"} 1
+log_messages{level="warning",type="untyped"} 0
 ```
 
 ## Install
@@ -41,7 +41,7 @@ func main() {
 	log.Error("error")
 	// by adding a field in form of logrusprom.ErrorTypeKey you can set a type to your metric
 	// this is useful for alerting on particular error type
-	log.WithField(logrusprom.ErrorTypeKey, "WarningOnSomething").Warn("warning")
+	log.WithField(logrusprom.TypeKey, "WarningOnSomething").Warn("warning")
 	
 	// add the handler to retrieve metrics
 	http.ListenAndServe(":8080", logrusprom.Handler())
@@ -67,7 +67,7 @@ import (
 func main() {
 	log.Info("info")
 	log.Error("error")
-	log.WithField(logrusprom.ErrorTypeKey, "WarningOnSomething").Warn("warning")
+	log.WithField(logrusprom.TypeKey, "WarningOnSomething").Warn("warning")
 
     // Add the collector in your registry (here we use the default one)
 	prometheus.MustRegister(logrusprom.Collector())
@@ -103,7 +103,7 @@ func main() {
 
 	myLogger.Info("info")
 	myLogger.Error("error")
-	myLogger.WithField(logrusprom.ErrorTypeKey, "WarningOnSomething").Warn("warning")
+	myLogger.WithField(logrusprom.TypeKey, "WarningOnSomething").Warn("warning")
 
 	http.ListenAndServe(":8080", hook.Handler())
 }

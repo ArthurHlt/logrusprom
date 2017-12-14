@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	ErrorTypeKey   = "error_type"
-	defaultErrType = "untyped"
+	TypeKey     = "type"
+	defaultType = "untyped"
 )
 
 type optSetter func(f *PrometheusHook)
@@ -41,8 +41,8 @@ func NewPrometheusHook(metricName string, setters ...optSetter) (*PrometheusHook
 }
 
 func (h PrometheusHook) Fire(entry *logrus.Entry) error {
-	errType := defaultErrType
-	if errTypeI, ok := entry.Data[ErrorTypeKey]; ok {
+	errType := defaultType
+	if errTypeI, ok := entry.Data[TypeKey]; ok {
 		errType = sanitizeName(fmt.Sprint(errTypeI))
 	}
 	h.counterVec.WithLabelValues(entry.Level.String(), errType).Inc()
@@ -75,10 +75,10 @@ func createCounterVec(metricName string) *prometheus.CounterVec {
 	counterVec := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: sanitizeName(metricName),
 		Help: fmt.Sprintf("Total number of %s .", metricName),
-	}, []string{"level", "error_type"})
+	}, []string{"level", TypeKey})
 
 	for _, level := range logrus.AllLevels {
-		counterVec.WithLabelValues(level.String(), defaultErrType)
+		counterVec.WithLabelValues(level.String(), defaultType)
 	}
 	return counterVec
 }
