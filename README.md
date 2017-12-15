@@ -8,13 +8,9 @@ type for [Prometheus](https://prometheus.io/).
 ```promql
 # HELP log_messages Total number of log_messages .
 # TYPE log_messages counter
-log_messages{level="debug",type="untyped"} 0
 log_messages{level="error",type="untyped"} 1
-log_messages{level="fatal",type="untyped"} 0
 log_messages{level="info",type="untyped"} 1
-log_messages{level="panic",type="untyped"} 0
 log_messages{level="warning",type="WarningOnSomething"} 1
-log_messages{level="warning",type="untyped"} 0
 ```
 
 ## Install

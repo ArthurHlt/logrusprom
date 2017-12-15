@@ -82,18 +82,12 @@ func (h *PrometheusHook) initCounter() error {
 
 	labelKeys := []string{"level", TypeKey}
 	labelKeys = append(labelKeys, keysOrderFromMap(h.labels)...)
-	labelValues := valuesOrderFromMap(h.labels)
 
 	counterVec := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: sanitizeName(h.metricName),
 		Help: fmt.Sprintf("Total number of %s .", h.metricName),
 	}, labelKeys)
 
-	for _, level := range logrus.AllLevels {
-		values := []string{level.String(), defaultType}
-		values = append(values, labelValues...)
-		counterVec.WithLabelValues(values...)
-	}
 	h.counterVec = counterVec
 	return h.promReg.Register(h.counterVec)
 }
