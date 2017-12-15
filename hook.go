@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -20,22 +21,21 @@ type PrometheusHook struct {
 	counterVec  *prometheus.CounterVec
 	promReg     *prometheus.Registry
 	handlerOpts promhttp.HandlerOpts
+	labels      map[string]string
+	metricName  string
 }
 
 func NewPrometheusHook(metricName string, setters ...optSetter) (*PrometheusHook, error) {
-
-	counterVec := createCounterVec(metricName)
-	reg := prometheus.NewRegistry()
-	err := reg.Register(counterVec)
-	if err != nil {
-		return nil, err
-	}
 	hook := &PrometheusHook{
-		counterVec: counterVec,
-		promReg:    reg,
+		labels:     make(map[string]string),
+		metricName: metricName,
 	}
 	for _, s := range setters {
 		s(hook)
+	}
+	err := hook.initCounter()
+	if err != nil {
+		return nil, err
 	}
 	return hook, nil
 }
@@ -45,7 +45,9 @@ func (h PrometheusHook) Fire(entry *logrus.Entry) error {
 	if errTypeI, ok := entry.Data[TypeKey]; ok {
 		errType = sanitizeName(fmt.Sprint(errTypeI))
 	}
-	h.counterVec.WithLabelValues(entry.Level.String(), errType).Inc()
+	labelValues := []string{entry.Level.String(), errType}
+	labelValues = append(labelValues, valuesOrderFromMap(h.labels)...)
+	h.counterVec.WithLabelValues(labelValues...).Inc()
 	return nil
 }
 
@@ -66,28 +68,60 @@ func (h PrometheusHook) Collector() prometheus.Collector {
 }
 
 func (h *PrometheusHook) SetName(metricName string) error {
-	h.promReg.Unregister(h.counterVec)
-	h.counterVec = createCounterVec(metricName)
-	return h.promReg.Register(h.counterVec)
+	h.metricName = metricName
+	return h.initCounter()
 }
 
-func createCounterVec(metricName string) *prometheus.CounterVec {
+func (h *PrometheusHook) SetLabels(labels map[string]string) error {
+	h.labels = labels
+	return h.initCounter()
+}
+
+func (h *PrometheusHook) initCounter() error {
+	h.promReg = prometheus.NewRegistry()
+
+	labelKeys := []string{"level", TypeKey}
+	labelKeys = append(labelKeys, keysOrderFromMap(h.labels)...)
+	labelValues := valuesOrderFromMap(h.labels)
+
 	counterVec := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: sanitizeName(metricName),
-		Help: fmt.Sprintf("Total number of %s .", metricName),
-	}, []string{"level", TypeKey})
+		Name: sanitizeName(h.metricName),
+		Help: fmt.Sprintf("Total number of %s .", h.metricName),
+	}, labelKeys)
 
 	for _, level := range logrus.AllLevels {
-		counterVec.WithLabelValues(level.String(), defaultType)
+		values := []string{level.String(), defaultType}
+		values = append(values, labelValues...)
+		counterVec.WithLabelValues(values...)
 	}
-	return counterVec
+	h.counterVec = counterVec
+	return h.promReg.Register(h.counterVec)
 }
 func sanitizeName(s string) string {
 	return strings.Replace(strings.TrimSpace(s), " ", "_", -1)
 }
-
+func valuesOrderFromMap(m map[string]string) []string {
+	values := make([]string, 0)
+	for _, k := range keysOrderFromMap(m) {
+		values = append(values, m[k])
+	}
+	return values
+}
+func keysOrderFromMap(m map[string]string) []string {
+	keys := make([]string, 0)
+	for k, _ := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
 func HandlerOpts(opts promhttp.HandlerOpts) optSetter {
 	return func(h *PrometheusHook) {
 		h.handlerOpts = opts
+	}
+}
+func AddLabels(labels map[string]string) optSetter {
+	return func(h *PrometheusHook) {
+		h.labels = labels
 	}
 }

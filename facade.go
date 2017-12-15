@@ -40,6 +40,10 @@ func SetName(metricName string) error {
 	return hook.SetName(metricName)
 }
 
+func SetLabels(labels map[string]string) error {
+	return hook.SetLabels(labels)
+}
+
 type logrusPromLogger struct {
 	logger *logrus.Logger
 }

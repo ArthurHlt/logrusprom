@@ -49,7 +49,9 @@ func main() {
 }
 ```
 
-**Tips**: You can rename your metric name by doing `logrusprom.SetName("my_custom_metric_name")` (By default name is: `log_messages`)
+**Tips**: 
+- You can rename your metric name by doing `logrusprom.SetName("my_custom_metric_name")` (By default name is: `log_messages`)
+- You can add custom labels to your metrics: `logrusprom.SetLabels(map[string]string{"mylabel": "labelvalue"})`
 
 ### Using in your own prometheus registry
 
